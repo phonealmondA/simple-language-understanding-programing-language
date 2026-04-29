@@ -1,0 +1,34 @@
+* <main> PatternLearningDemo {
+    ^ observe_execution {
+        // Define problem
+        targetNum <> 250
+        inputs <> [3, 7, 25, 50]
+
+        speak("=== QUANTUM PATTERN LEARNING DEMO ===")
+        speak("Target: ~targetNum~")
+        speak("Available inputs: [3, 7, 25, 50]")
+        speak("")
+
+        // This will test multiple control flow patterns in parallel:
+        // 1. Count loop (fixed iterations)
+        // 2. While loop (condition-based with early exit)
+        // 3. Range loop (bounded iteration)
+        // 4. Nested structure (loops inside conditionals)
+        // 5. Cached lookup (check previous solutions first)
+
+        speak("Testing multiple algorithmic patterns in parallel...")
+
+        // Traditional approach (single strategy)
+        result([targetNum]) <> randomChoice(inputs + [?])
+
+        speak("")
+        speak("Traditional Result: ~result~")
+        speak("")
+        speak("=== PATTERN LEARNING RESULTS ===")
+        speak("Best pattern will be cached for future runs")
+        speak("Next execution will reuse winning strategy")
+        speak("System learns which algorithms work best!")
+
+        woof result
+    }
+}

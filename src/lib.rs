@@ -31,6 +31,7 @@ mod interactive_engine;
 mod condition_evaluator;
 mod loop_executor;
 mod memory;
+mod pattern_generator;
 
 use function_builder::FunctionBuilder;
 use function_executor::FunctionExecutor;
@@ -39,6 +40,7 @@ use variable_manager::VariableManager;
 use interactive_engine::InteractiveEngine;
 use condition_evaluator::ConditionEvaluator;
 use loop_executor::LoopExecutor;
+use pattern_generator::{PatternGenerator, ProblemSpec};
 
 #[derive(Parser)]
 #[command(name = "quantum")]
@@ -63,6 +65,13 @@ struct QuantumCache {
     built_functions: HashMap<String, BuiltFunction>,
     math_solutions: HashMap<String, MathSolution>,
     function_results: HashMap<String, FunctionResult>,
+    // NEW: Pattern learning fields
+    #[serde(default)]
+    control_flow_patterns: HashMap<String, CachedPattern>,
+    #[serde(default)]
+    function_strategies: HashMap<String, FunctionStrategy>,
+    #[serde(default)]
+    algorithm_performances: HashMap<String, AlgorithmMetrics>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -143,6 +152,46 @@ pub struct MathSolution {
     pub formula: Option<String>,
 }
 
+// NEW: Pattern learning structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedPattern {
+    pub pattern_type: PatternType,
+    pub structure: String,
+    pub success_rate: f64,
+    pub avg_iterations: f64,
+    pub execution_time_ms: f64,
+    pub problem_signature: String,
+    pub timestamp: u64,
+    pub times_used: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PatternType {
+    CountLoop,
+    RangeLoop,
+    WhileLoop,
+    ConditionalChain,
+    NestedStructure,
+    Hybrid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FunctionStrategy {
+    pub strategy_name: String,
+    pub approach: Vec<String>,
+    pub success_cases: Vec<String>,
+    pub avg_performance: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlgorithmMetrics {
+    pub algorithm_name: String,
+    pub iterations_taken: u32,
+    pub memory_used: usize,
+    pub execution_time_ms: f64,
+    pub correctness_score: f64,
+}
+
 // main() function is only in src/main.rs (the binary)
 // This library just provides the implementation
 
@@ -158,6 +207,7 @@ pub struct QuantumTranspiler {
     current_class_name: String,
     cache_directory: PathBuf,
     console_callback: Option<ConsoleCallback>,
+    pattern_generator: PatternGenerator,
 }
 
 impl QuantumTranspiler {
@@ -187,6 +237,9 @@ impl QuantumTranspiler {
                 built_functions: HashMap::new(),
                 math_solutions: HashMap::new(),
                 function_results: HashMap::new(),
+                control_flow_patterns: HashMap::new(),
+                function_strategies: HashMap::new(),
+                algorithm_performances: HashMap::new(),
             }
         });
 
@@ -201,6 +254,11 @@ impl QuantumTranspiler {
         let variable_manager = VariableManager::new(cache.variables.clone());
         let condition_evaluator = ConditionEvaluator::new();
         let loop_executor = LoopExecutor::new();
+        let pattern_generator = PatternGenerator::new(cache.control_flow_patterns.clone());
+
+        if !cache.control_flow_patterns.is_empty() {
+            info!("** Loaded {} cached control flow patterns", cache.control_flow_patterns.len());
+        }
 
         Ok(Self {
             cache,
@@ -214,6 +272,7 @@ impl QuantumTranspiler {
             current_class_name: String::new(),
             cache_directory: cache_dir,
             console_callback: None,
+            pattern_generator,
         })
     }
 
@@ -225,10 +284,11 @@ impl QuantumTranspiler {
     }
 
     fn save_cache(&mut self) -> Result<()> {
-
+        // Update cache with latest data from all engines
         self.cache.math_solutions = self.math_engine.get_solutions();
         self.cache.variable_attempts = self.math_engine.get_variable_attempts();
         self.cache.variables = self.variable_manager.get_all_variables();
+        self.cache.control_flow_patterns = self.pattern_generator.get_cached_patterns().clone();
 
         // Save JSON (for backward compatibility)
         let content = serde_json::to_string_pretty(&self.cache)?;

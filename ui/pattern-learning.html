@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pattern Learning - Quantum Consciousness IDE</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Main container */
+        #pattern-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr 1fr;
+            height: 100vh;
+            gap: 15px;
+            padding: 15px;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateX(-3px);
+        }
+
+        /* Panel base */
+        .panel {
+            background: rgba(30, 30, 50, 0.98);
+            border-radius: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .panel h2 {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.5);
+            color: #667eea;
+        }
+
+        /* Statistics Panel */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.4);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        /* Pattern List */
+        .pattern-list {
+            margin-top: 15px;
+        }
+
+        .pattern-item {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .pattern-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .pattern-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #4CAF50;
+        }
+
+        .pattern-type {
+            background: rgba(102, 126, 234, 0.3);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+
+        .pattern-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .metric {
+            font-size: 0.85em;
+        }
+
+        .metric-label {
+            opacity: 0.7;
+            margin-bottom: 3px;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #4CAF50;
+        }
+
+        /* Performance Chart */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 15px;
+        }
+
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            height: 100%;
+            gap: 10px;
+            padding: 20px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 30px;
+        }
+
+        .chart-bar:hover {
+            filter: brightness(1.2);
+            transform: scaleY(1.05);
+        }
+
+        .chart-label {
+            position: absolute;
+            bottom: -25px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.75em;
+            opacity: 0.8;
+        }
+
+        .chart-value {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #4CAF50;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            opacity: 0.6;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        /* Refresh Button */
+        .refresh-button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        /* Scrollbar */
+        .panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .panel::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+
+        .panel::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 4px;
+        }
+
+        .panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div id="pattern-container">
+        <!-- Header -->
+        <div class="header">
+            <button class="back-button" onclick="window.location.href='index.html'">
+                ← Back to IDE
+            </button>
+            <h1>🧠 Quantum Pattern Learning</h1>
+            <p>Real-time algorithm learning and optimization visualization</p>
+        </div>
+
+        <!-- Statistics Overview -->
+        <div class="panel">
+            <h2>📊 Learning Statistics</h2>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h3>Total Patterns</h3>
+                    <div class="stat-value" id="totalPatterns">0</div>
+                    <div class="stat-label">Cached Strategies</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg Success Rate</h3>
+                    <div class="stat-value" id="avgSuccess">0%</div>
+                    <div class="stat-label">Pattern Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Most Used</h3>
+                    <div class="stat-value" id="mostUsed" style="font-size: 1.2em;">-</div>
+                    <div class="stat-label">Top Strategy</div>
+                </div>
+            </div>
+
+            <div class="chart-container" id="typeChart">
+                <div class="chart-bars" id="chartBars"></div>
+            </div>
+
+            <button class="refresh-button" onclick="refreshData()">
+                🔄 Refresh Data
+            </button>
+        </div>
+
+        <!-- Cached Patterns List -->
+        <div class="panel">
+            <h2>🎯 Cached Patterns</h2>
+            <div class="pattern-list" id="patternList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🤔</div>
+                    <h3>No Patterns Yet</h3>
+                    <p>Run some .slut files to start learning patterns!<br>
+                       The system will cache successful strategies automatically.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Analysis -->
+        <div class="panel">
+            <h2>⚡ Performance Analysis</h2>
+            <div id="performanceAnalysis">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📈</div>
+                    <h3>Waiting for Data</h3>
+                    <p>Performance metrics will appear here after running programs.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pattern Type Breakdown -->
+        <div class="panel">
+            <h2>🔍 Pattern Type Breakdown</h2>
+            <div id="typeBreakdown">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <h3>No Pattern Data</h3>
+                    <p>Statistics by pattern type will be displayed here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tauri API
+        const { invoke } = window.__TAURI__.tauri;
+
+        // Load pattern data on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+        });
+
+        async function refreshData() {
+            try {
+                // Get pattern learning data
+                const data = await invoke('get_pattern_learning_data');
+                const stats = await invoke('get_pattern_stats');
+
+                updateStatistics(data, stats);
+                updatePatternList(data.patterns);
+                updateTypeChart(stats.by_type);
+                updatePerformanceAnalysis(data.patterns);
+                updateTypeBreakdown(stats.by_type);
+
+            } catch (error) {
+                console.error('Failed to load pattern data:', error);
+            }
+        }
+
+        function updateStatistics(data, stats) {
+            document.getElementById('totalPatterns').textContent = data.total_patterns;
+            document.getElementById('avgSuccess').textContent =
+                data.avg_success_rate.toFixed(1) + '%';
+            document.getElementById('mostUsed').textContent =
+                data.most_used_pattern || '-';
+        }
+
+        function updatePatternList(patterns) {
+            const listEl = document.getElementById('patternList');
+
+            if (patterns.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🤔</div>
+                        <h3>No Patterns Yet</h3>
+                        <p>Run some .slut files to start learning patterns!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by times_used descending
+            patterns.sort((a, b) => b.times_used - a.times_used);
+
+            listEl.innerHTML = patterns.map(pattern => `
+                <div class="pattern-item">
+                    <div class="pattern-header">
+                        <div class="pattern-name">${pattern.name}</div>
+                        <div class="pattern-type">${pattern.pattern_type}</div>
+                    </div>
+                    <div class="pattern-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Success Rate</div>
+                            <div class="metric-value">${pattern.success_rate.toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Avg Time</div>
+                            <div class="metric-value">${pattern.execution_time_ms.toFixed(1)}ms</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Times Used</div>
+                            <div class="metric-value">${pattern.times_used}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateTypeChart(byType) {
+            const chartBars = document.getElementById('chartBars');
+
+            if (!byType || Object.keys(byType).length === 0) {
+                chartBars.innerHTML = '<div class="empty-state">No data yet</div>';
+                return;
+            }
+
+            const maxCount = Math.max(...Object.values(byType).map(t => t.count));
+
+            chartBars.innerHTML = Object.entries(byType).map(([type, data]) => {
+                const height = (data.count / maxCount) * 100;
+                return `
+                    <div class="chart-bar" style="height: ${height}%">
+                        <div class="chart-value">${data.count}</div>
+                        <div class="chart-label">${type}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updatePerformanceAnalysis(patterns) {
+            const el = document.getElementById('performanceAnalysis');
+
+            if (patterns.length === 0) {
+                el.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📈</div>
+                        <h3>No Performance Data</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            // Calculate averages
+            const avgTime = patterns.reduce((sum, p) => sum + p.execution_time_ms, 0) / patterns.length;
+            const avgIterations = patterns.reduce((sum, p) => sum + p.avg_iterations, 0) / patterns.length;
+
+            // Find fastest pattern
+            const fastest = patterns.reduce((min, p) =>
+                p.execution_time_ms < min.execution_time_ms ? p : min
+            );
+
+            el.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Avg Execution Time</h3>
+                        <div class="stat-value">${avgTime.toFixed(1)}<span style="font-size: 0.5em">ms</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg Iterations</h3>
+                        <div class="stat-value">${avgIterations.toFixed(0)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Fastest Pattern</h3>
+                        <div class="stat-value" style="font-size: 1.2em">${fastest.name}</div>
+                        <div class="stat-label">${fastest.execution_time_ms.toFixed(1)}ms</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateTypeBreakdown(byType) {
+            const el = document.getElementById('typeBreakdown');
+
+            if (!byType || Object.keys(byType).length === 0) {
+                el.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>No Pattern Types</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            el.innerHTML = Object.entries(byType).map(([type, data]) => `
+                <div class="pattern-item">
+                    <div class="pattern-header">
+                        <div class="pattern-name">${type}</div>
+                        <div class="pattern-type">${data.count} patterns</div>
+                    </div>
+                    <div class="pattern-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Avg Success</div>
+                            <div class="metric-value">${data.avg_success_rate.toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Avg Time</div>
+                            <div class="metric-value">${data.avg_time_ms.toFixed(1)}ms</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

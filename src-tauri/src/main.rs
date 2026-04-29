@@ -15,6 +15,9 @@ fn main() {
             tauri_commands::get_working_directory,
             tauri_commands::get_cache_history,
             tauri_commands::clear_memory_state,
+            // Pattern Learning Commands
+            tauri_commands::get_pattern_learning_data,
+            tauri_commands::get_pattern_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

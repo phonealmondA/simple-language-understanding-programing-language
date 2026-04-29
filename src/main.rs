@@ -19,6 +19,7 @@ mod interactive_engine;
 mod condition_evaluator;
 mod loop_executor;
 mod memory;
+mod pattern_generator;
 
 use function_builder::FunctionBuilder;
 use function_executor::FunctionExecutor;
@@ -27,6 +28,7 @@ use variable_manager::VariableManager;
 use interactive_engine::InteractiveEngine;
 use condition_evaluator::ConditionEvaluator;
 use loop_executor::LoopExecutor;
+use pattern_generator::{PatternGenerator, ProblemSpec};
 
 #[derive(Parser)]
 #[command(name = "quantum")]
@@ -51,6 +53,13 @@ struct QuantumCache {
     built_functions: HashMap<String, BuiltFunction>,
     math_solutions: HashMap<String, MathSolution>,
     function_results: HashMap<String, FunctionResult>,
+    // NEW: Pattern learning fields
+    #[serde(default)]
+    control_flow_patterns: HashMap<String, CachedPattern>,
+    #[serde(default)]
+    function_strategies: HashMap<String, FunctionStrategy>,
+    #[serde(default)]
+    algorithm_performances: HashMap<String, AlgorithmMetrics>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -127,6 +136,46 @@ pub struct MathSolution {
     pub attempts: u32,
 }
 
+// NEW: Pattern learning structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedPattern {
+    pub pattern_type: PatternType,
+    pub structure: String,
+    pub success_rate: f64,
+    pub avg_iterations: f64,
+    pub execution_time_ms: f64,
+    pub problem_signature: String,
+    pub timestamp: u64,
+    pub times_used: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PatternType {
+    CountLoop,
+    RangeLoop,
+    WhileLoop,
+    ConditionalChain,
+    NestedStructure,
+    Hybrid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FunctionStrategy {
+    pub strategy_name: String,
+    pub approach: Vec<String>,
+    pub success_cases: Vec<String>,
+    pub avg_performance: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlgorithmMetrics {
+    pub algorithm_name: String,
+    pub iterations_taken: u32,
+    pub memory_used: usize,
+    pub execution_time_ms: f64,
+    pub correctness_score: f64,
+}
+
 fn main() -> Result<()> {
     // Initialize tracing subscriber
     tracing_subscriber::fmt()
@@ -193,6 +242,7 @@ pub struct QuantumTranspiler {
     condition_evaluator: ConditionEvaluator,
     loop_executor: LoopExecutor,
     current_class_name: String,
+    pattern_generator: PatternGenerator,
 }
 
 impl QuantumTranspiler {
@@ -217,6 +267,9 @@ impl QuantumTranspiler {
                 built_functions: HashMap::new(),
                 math_solutions: HashMap::new(),
                 function_results: HashMap::new(),
+                control_flow_patterns: HashMap::new(),
+                function_strategies: HashMap::new(),
+                algorithm_performances: HashMap::new(),
             }
         });
 
@@ -230,6 +283,11 @@ impl QuantumTranspiler {
         let variable_manager = VariableManager::new(cache.variables.clone());
         let condition_evaluator = ConditionEvaluator::new();
         let loop_executor = LoopExecutor::new();
+        let pattern_generator = PatternGenerator::new(cache.control_flow_patterns.clone());
+
+        if !cache.control_flow_patterns.is_empty() {
+            info!("** Loaded {} cached control flow patterns", cache.control_flow_patterns.len());
+        }
 
         Ok(Self {
             cache,
@@ -241,6 +299,7 @@ impl QuantumTranspiler {
             condition_evaluator,
             loop_executor,
             current_class_name: String::new(),
+            pattern_generator,
         })
     }
     
@@ -253,10 +312,11 @@ impl QuantumTranspiler {
     }
 
     fn save_cache(&mut self) -> Result<()> {
-
+        // Update cache with latest data from all engines
         self.cache.math_solutions = self.math_engine.get_solutions();
         self.cache.variable_attempts = self.math_engine.get_variable_attempts();
         self.cache.variables = self.variable_manager.get_all_variables();
+        self.cache.control_flow_patterns = self.pattern_generator.get_cached_patterns().clone();
 
         // Ensure cache directory exists
         let cache_dir = PathBuf::from("cache");
@@ -368,7 +428,62 @@ impl QuantumTranspiler {
         
         Ok(())
     }
-    
+
+    /// Execute pattern learning for a target-solving problem
+    /// This tests multiple control flow patterns in parallel
+    fn execute_pattern_learning(&mut self, target: f64, inputs: Vec<f64>, var_name: &str) -> Result<f64> {
+        info!("");
+        info!("🧠 QUANTUM PATTERN LEARNING ACTIVATED");
+        info!(">> Target: {}, Inputs: {:?}", target, inputs);
+
+        // Create problem specification
+        let problem = ProblemSpec::new(target, inputs.clone());
+
+        // Check if we have a cached pattern for this problem
+        if let Some(cached_pattern) = self.pattern_generator.find_matching_pattern(&problem) {
+            info!("⚡ Using cached pattern: {} (success rate: {:.1}%)",
+                   cached_pattern.structure, cached_pattern.success_rate);
+            info!("   Previous performance: {:.2}ms, {} iterations",
+                   cached_pattern.execution_time_ms, cached_pattern.avg_iterations as u32);
+
+            // Use existing math engine to solve (it's already optimized)
+            let solution = self.math_engine.solve_target(target, &inputs, var_name, &self.current_class_name)?;
+            return Ok(solution.result);
+        }
+
+        // No cached pattern - generate and test variants in parallel
+        info!(">> No cached pattern found - testing multiple strategies in parallel...");
+        let variants = self.pattern_generator.generate_pattern_variants(&problem);
+
+        info!(">> Generated {} pattern variants", variants.len());
+        for variant in &variants {
+            info!("   - {} ({:?}): {}", variant.name, variant.pattern_type, variant.description);
+        }
+
+        // Test all patterns in parallel
+        let test_result = self.pattern_generator.test_patterns_parallel(variants, &problem)?;
+
+        info!("");
+        info!("✓ PATTERN LEARNING COMPLETE");
+        info!("   Best pattern: {} ({:?})",
+               test_result.best_pattern.variant.name,
+               test_result.best_pattern.variant.pattern_type);
+        info!("   Performance: {:.1}% correct, {:.2}ms, {} iterations",
+               test_result.best_pattern.correctness * 100.0,
+               test_result.best_pattern.execution_time_ms,
+               test_result.best_pattern.iterations);
+
+        // Return the result from the best pattern
+        if let Some(result) = test_result.best_pattern.result_value {
+            Ok(result)
+        } else {
+            // Fallback to regular math engine
+            info!("   Falling back to standard math engine");
+            let solution = self.math_engine.solve_target(target, &inputs, var_name, &self.current_class_name)?;
+            Ok(solution.result)
+        }
+    }
+
     fn execute_main_body(&mut self, body: &str, class_name: &str) -> Result<()> {
         let lines = body.lines().collect::<Vec<&str>>();
         let mut i = 0;
@@ -892,7 +1007,7 @@ impl QuantumTranspiler {
     }
     
     fn solve_target_math(&mut self, var_name: &str, target_str: &str, inputs_str: &str, class_name: &str) -> Result<()> {
-        
+
         let target: f64 = if let Ok(num) = target_str.parse::<f64>() {
             num
         } else if let Some(variable) = self.variable_manager.get_variable(target_str) {
@@ -910,24 +1025,34 @@ impl QuantumTranspiler {
             println!("!! Could not resolve target: {}", target_str);
             return Ok(());
         };
-        
+
         let inputs = self.variable_manager.resolve_expression_inputs_with_target(inputs_str, Some(target));
-        
-        println!(">> Target-seeking quantum mathematics for variable '{}': target={}, inputs={:?}", 
+
+        println!(">> Target-seeking quantum mathematics for variable '{}': target={}, inputs={:?}",
                 var_name, target, inputs);
-        
-        let solution = self.math_engine.solve_target(target, &inputs, var_name, class_name)?;
-        
+
+        // Enable pattern learning for complex problems (3+ inputs or targets > 100)
+        let use_pattern_learning = inputs.len() >= 3 || target > 100.0;
+
+        let result = if use_pattern_learning {
+            info!(">> Pattern learning enabled (complex problem detected)");
+            self.execute_pattern_learning(target, inputs, var_name)?
+        } else {
+            let solution = self.math_engine.solve_target(target, &inputs, var_name, class_name)?;
+            solution.result
+        };
+
+        // Store the result
+        let solution_eq = format!("pattern_learned_solution({})", target);
         self.variable_manager.store_variable(
             var_name,
-            VariableValue::Number(solution.result),
-            Some(solution.equation.clone()),
+            VariableValue::Number(result),
+            Some(solution_eq.clone()),
         )?;
-        
-        println!("== Solution found: {} = {} (accuracy: {}%)", 
-                solution.equation, solution.result, solution.accuracy);
-        println!("-- Variable '{}' stored with value: {}", var_name, solution.result);
-        
+
+        println!("== Solution found: {} (value: {})", solution_eq, result);
+        println!("-- Variable '{}' stored with value: {}", var_name, result);
+
         Ok(())
     }
     

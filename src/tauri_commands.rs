@@ -418,3 +418,175 @@ pub fn clear_memory_state(state: State<'_, AppState>) -> Result<(), String> {
 
     Ok(())
 }
+
+// ============================================================================
+// PATTERN LEARNING COMMANDS
+// ============================================================================
+
+/// Pattern learning data for frontend visualization
+#[derive(serde::Serialize, Clone)]
+pub struct PatternLearningData {
+    pub patterns: Vec<PatternInfo>,
+    pub total_patterns: usize,
+    pub most_used_pattern: Option<String>,
+    pub avg_success_rate: f64,
+}
+
+/// Individual pattern information
+#[derive(serde::Serialize, Clone)]
+pub struct PatternInfo {
+    pub name: String,
+    pub pattern_type: String,
+    pub success_rate: f64,
+    pub avg_iterations: f64,
+    pub execution_time_ms: f64,
+    pub problem_signature: String,
+    pub times_used: u32,
+    pub timestamp: u64,
+}
+
+/// Command to get all cached patterns
+#[tauri::command]
+pub fn get_pattern_learning_data(
+    app: AppHandle,
+    _state: State<'_, AppState>,
+) -> Result<PatternLearningData, String> {
+    let cache_dir = get_cache_directory(&app)?;
+    let cache_path = cache_dir.join("quantum_consciousness_cache.json");
+
+    // If no cache exists, return empty data
+    if !cache_path.exists() {
+        return Ok(PatternLearningData {
+            patterns: vec![],
+            total_patterns: 0,
+            most_used_pattern: None,
+            avg_success_rate: 0.0,
+        });
+    }
+
+    // Read cache
+    let cache_content = std::fs::read_to_string(&cache_path)
+        .map_err(|e| format!("Failed to read cache: {}", e))?;
+
+    let cache_data: serde_json::Value = serde_json::from_str(&cache_content)
+        .map_err(|e| format!("Failed to parse cache: {}", e))?;
+
+    // Extract patterns
+    let mut patterns = Vec::new();
+
+    if let Some(patterns_obj) = cache_data.get("control_flow_patterns") {
+        if let Some(patterns_map) = patterns_obj.as_object() {
+            for (_key, pattern_data) in patterns_map {
+                if let (
+                    Some(structure),
+                    Some(pattern_type),
+                    Some(success_rate),
+                    Some(avg_iterations),
+                    Some(execution_time_ms),
+                    Some(problem_signature),
+                    Some(times_used),
+                    Some(timestamp),
+                ) = (
+                    pattern_data.get("structure").and_then(|s| s.as_str()),
+                    pattern_data.get("pattern_type"),
+                    pattern_data.get("success_rate").and_then(|s| s.as_f64()),
+                    pattern_data.get("avg_iterations").and_then(|a| a.as_f64()),
+                    pattern_data.get("execution_time_ms").and_then(|e| e.as_f64()),
+                    pattern_data.get("problem_signature").and_then(|p| p.as_str()),
+                    pattern_data.get("times_used").and_then(|t| t.as_u64()),
+                    pattern_data.get("timestamp").and_then(|t| t.as_u64()),
+                ) {
+                    // Convert pattern_type enum to string
+                    let pattern_type_str = match pattern_type.as_str() {
+                        Some(s) => s.to_string(),
+                        None => format!("{:?}", pattern_type),
+                    };
+
+                    patterns.push(PatternInfo {
+                        name: structure.to_string(),
+                        pattern_type: pattern_type_str,
+                        success_rate,
+                        avg_iterations,
+                        execution_time_ms,
+                        problem_signature: problem_signature.to_string(),
+                        times_used: times_used as u32,
+                        timestamp,
+                    });
+                }
+            }
+        }
+    }
+
+    // Calculate statistics
+    let total_patterns = patterns.len();
+    let avg_success_rate = if total_patterns > 0 {
+        patterns.iter().map(|p| p.success_rate).sum::<f64>() / total_patterns as f64
+    } else {
+        0.0
+    };
+
+    let most_used_pattern = patterns
+        .iter()
+        .max_by_key(|p| p.times_used)
+        .map(|p| p.name.clone());
+
+    Ok(PatternLearningData {
+        patterns,
+        total_patterns,
+        most_used_pattern,
+        avg_success_rate,
+    })
+}
+
+/// Pattern test result for real-time visualization
+#[derive(serde::Serialize, Clone)]
+pub struct PatternTestEvent {
+    pub variant_name: String,
+    pub pattern_type: String,
+    pub correctness: f64,
+    pub execution_time_ms: f64,
+    pub iterations: u32,
+    pub is_best: bool,
+}
+
+/// Command to get pattern learning statistics summary
+#[tauri::command]
+pub fn get_pattern_stats(
+    app: AppHandle,
+    _state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let data = get_pattern_learning_data(app, _state)?;
+
+    // Group patterns by type
+    let mut by_type: std::collections::HashMap<String, Vec<&PatternInfo>> =
+        std::collections::HashMap::new();
+
+    for pattern in &data.patterns {
+        by_type
+            .entry(pattern.pattern_type.clone())
+            .or_insert_with(Vec::new)
+            .push(pattern);
+    }
+
+    // Calculate stats by type
+    let mut type_stats = serde_json::Map::new();
+    for (ptype, patterns) in by_type {
+        let count = patterns.len();
+        let avg_success = patterns.iter().map(|p| p.success_rate).sum::<f64>() / count as f64;
+        let avg_time = patterns.iter().map(|p| p.execution_time_ms).sum::<f64>() / count as f64;
+
+        let mut stats = serde_json::Map::new();
+        stats.insert("count".to_string(), serde_json::json!(count));
+        stats.insert("avg_success_rate".to_string(), serde_json::json!(avg_success));
+        stats.insert("avg_time_ms".to_string(), serde_json::json!(avg_time));
+
+        type_stats.insert(ptype, serde_json::Value::Object(stats));
+    }
+
+    Ok(serde_json::json!({
+        "total_patterns": data.total_patterns,
+        "avg_success_rate": data.avg_success_rate,
+        "most_used": data.most_used_pattern,
+        "by_type": type_stats,
+    }))
+}

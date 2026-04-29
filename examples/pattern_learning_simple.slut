@@ -1,0 +1,26 @@
+* <main> SimplePatternLearning {
+    ^ observe_execution {
+        speak("=== Simple Pattern Learning Demo ===")
+        speak("")
+
+        // This problem has target > 100, so pattern learning will activate
+        target <> 250
+
+        speak("Target: ~target~")
+        speak("Finding solution using pattern learning...")
+        speak("")
+
+        // Pattern learning triggers automatically for targets > 100
+        result([target]) <> randomChoice([3, 7, 25, 50, ?])
+
+        speak("")
+        speak("Result: ~result~")
+        speak("")
+        speak("Run this program multiple times!")
+        speak("First run: Tests multiple patterns in parallel")
+        speak("Second run: Reuses cached winning pattern (faster!)")
+        speak("Third run: Pattern efficiency improves further")
+
+        woof result
+    }
+}
